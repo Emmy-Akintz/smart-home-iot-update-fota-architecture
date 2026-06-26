@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blockchain-FOTA Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+  </head>
+
+  <body class="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 lg:p-8">
+    <div class="mx-auto max-w-7xl">
+      <header
+        class="mb-6 flex flex-col gap-4 border-b border-slate-800 pb-5 lg:flex-row lg:items-center lg:justify-between"
+      >
+        <div>
+          <p class="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300/80">
+            Manufacturer + Examiner Control Center
+          </p>
+          <h1 class="text-3xl font-bold tracking-tight text-slate-50 lg:text-4xl">
+            Decentralized FOTA Security Architecture
+          </h1>
+          <p class="mt-2 max-w-2xl text-sm text-slate-400">
+            Upload firmware, anchor its hash to Sepolia, and verify the secure or tampered update path from the same dashboard.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <span
+            class="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300"
+          >
+            ● Gateway: Active
+          </span>
+          <span
+            id="sync-badge"
+            class="inline-flex items-center rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300"
+          >
+            Sepolia Testnet: Connecting...
+          </span>
+        </div>
+      </header>
+
+      <main class="grid grid-cols-1 gap-6 xl:grid-cols-[1.35fr_0.9fr]">
+        <section class="space-y-6">
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur">
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 class="text-lg font-semibold text-slate-100">Manufacturer Firmware Upload</h2>
+                <p class="mt-1 text-sm text-slate-400">
+                  Select a firmware version and file, then publish the SHA-256 hash to the smart contract.
+                </p>
+              </div>
+              <span class="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200">
+                Write Path
+              </span>
+            </div>
+
+            <form id="uploadForm" class="grid gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+              <label class="block">
+                <span class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Firmware Version
+                </span>
+                <input
+                  type="text"
+                  id="version"
+                  name="version"
+                  placeholder="v1.0.0"
+                  required
+                  class="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20"
+                />
+              </label>
+
+              <label class="block">
+                <span class="mb-2 block text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                  Firmware File
+                </span>
+                <input
+                  type="file"
+                  id="firmwareFile"
+                  name="firmwareFile"
+                  required
+                  class="block w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-lg file:border-0 file:bg-cyan-500 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-950 hover:file:bg-cyan-400"
+                />
+              </label>
+
+              <button
+                type="submit"
+                class="rounded-xl bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              >
+                Upload & Publish
+              </button>
+            </form>
+
+            <div class="mt-4 rounded-xl border border-slate-800 bg-slate-950/80 p-4">
+              <div class="mb-2 flex items-center justify-between gap-4">
+                <h3 class="text-sm font-semibold text-slate-200">Response</h3>
+                <span class="text-xs text-slate-500">Manufacturer server: http://localhost:3000</span>
+              </div>
+              <pre id="responseOutput" class="min-h-24 overflow-x-auto whitespace-pre-wrap break-words rounded-lg bg-slate-900 p-4 text-xs leading-6 text-slate-300">Waiting for upload...</pre>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur">
+            <h2 class="mb-3 text-lg font-semibold text-indigo-300">
+              🔗 Blockchain Smart Contract Registry (Immutable Hash Store)
+            </h2>
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-left text-xs">
+                <thead>
+                  <tr class="bg-slate-800 text-xs uppercase text-slate-300">
+                    <th class="rounded-tl-lg px-3 py-2">Version</th>
+                    <th class="px-3 py-2">Release Date</th>
+                    <th class="rounded-tr-lg px-3 py-2">SHA-256 Block Hash</th>
+                  </tr>
+                </thead>
+                <tbody id="registry-body">
+                  <tr class="bg-slate-900">
+                    <td colspan="3" class="px-3 py-4 text-center text-slate-400">
+                      Querying Sepolia testnet...
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur">
+            <h2 class="mb-3 text-lg font-semibold text-slate-200">💡 Local Network Smart Home Devices</h2>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div class="flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 p-4">
+                <div class="text-4xl">📺</div>
+                <div class="font-semibold text-slate-100">Smart TV</div>
+                <div class="text-xs text-slate-400">
+                  Version: <span class="font-mono text-cyan-200">v1.0.3</span>
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-800/40 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <svg class="mr-1 inline-block h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  Secure
+                </span>
+              </div>
+              <div class="flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 p-4">
+                <div class="text-4xl">🔒</div>
+                <div class="font-semibold text-slate-100">Smart Lock</div>
+                <div class="text-xs text-slate-400">
+                  Version: <span class="font-mono text-cyan-200">v1.0.2</span>
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-800/40 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <svg class="mr-1 inline-block h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  Secure
+                </span>
+              </div>
+              <div class="flex flex-col items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 p-4">
+                <div class="text-4xl">🌡️</div>
+                <div class="font-semibold text-slate-100">Smart Thermostat</div>
+                <div class="text-xs text-slate-400">
+                  Version: <span class="font-mono text-cyan-200">v1.0.1</span>
+                </div>
+                <span class="inline-flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-800/40 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <svg class="mr-1 inline-block h-3 w-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                  Secure
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="space-y-6">
+          <div class="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur">
+            <h3 class="mb-4 text-md font-semibold text-slate-200">Simulation Control Panel</h3>
+            <div class="flex flex-col gap-3">
+              <button
+                id="btn-normal"
+                class="rounded-lg bg-emerald-600 py-2 font-medium transition-all hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Simulate Secure Update Path
+              </button>
+              <button
+                id="btn-attack"
+                class="rounded-lg bg-rose-600 py-2 font-medium transition-all hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Simulate MITM Attack Path
+              </button>
+            </div>
+          </div>
+
+          <div class="relative h-72 overflow-y-auto rounded-2xl border border-slate-800 bg-black p-4 font-mono text-xs shadow-2xl shadow-cyan-950/20">
+            <div id="terminal-banner"></div>
+            <h3 class="mb-2 border-b border-slate-800 pb-1 font-bold text-amber-400">
+              ⚡ Live Edge Log Terminal
+            </h3>
+            <div id="terminal-content" class="text-slate-400">
+              [SYSTEM] Gateway listening for local firmware distribution events...
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer class="mt-6 text-center text-xs text-slate-500">
+        Contract:
+        <a
+          href="https://sepolia.etherscan.io/address/0xff546E51B1a346ED124930f519bAdA1C7fF68540#readContract"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="font-mono text-indigo-400 hover:text-indigo-300"
+        >
+          0xff546E51B1a346ED124930f519bAdA1C7fF68540
+        </a>
+        (Sepolia — read-only dashboard, no private keys)
+      </footer>
+    </div>
+
+    <script>
+      const SEPOLIA_RPC = "https://rpc.sepolia.org";
+      const SEPOLIA_RPC_FALLBACK = "https://ethereum-sepolia-rpc.publicnode.com";
+      const CONTRACT_ADDRESS = "0xff546E51B1a346ED124930f519bAdA1C7fF68540";
+      const READ_ABI = [
+        "function getFirmwareHash(string _version) view returns (string)",
+        "function firmwares(string) view returns (string version, string sha256Hash, uint256 timestamp)",
+      ];
+      const KNOWN_VERSIONS = ["v1.0.0", "v2.0.0"];
+      const DEMO_VERSION = "v1.0.0";
+      const TAMPERED_FIRMWARE_FILE = "test-firmware-tampered.txt";
+      const TAMPERED_FIRMWARE_FALLBACK =
+        "This is version 1.0 of the smart thermostat firmware, but with tampered payload.";
+
+      let provider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+      let contract = new ethers.Contract(CONTRACT_ADDRESS, READ_ABI, provider);
+      const registryCache = {};
+
+      const terminal = document.getElementById("terminal-content");
+      const banner = document.getElementById("terminal-banner");
+      const registryBody = document.getElementById("registry-body");
+      const syncBadge = document.getElementById("sync-badge");
+      const btnNormal = document.getElementById("btn-normal");
+      const btnAttack = document.getElementById("btn-attack");
+      const uploadForm = document.getElementById("uploadForm");
+      const responseOutput = document.getElementById("responseOutput");
+      const versionInput = document.getElementById("version");
+      const firmwareFileInput = document.getElementById("firmwareFile");
+
+      function printLine(line) {
+        const div = document.createElement("div");
+        div.textContent = line;
+        terminal.appendChild(div);
+        terminal.parentElement.scrollTop = terminal.parentElement.scrollHeight;
+      }
+
+      function clearTerminal() {
+        terminal.innerHTML = "";
+      }
+
+      function clearBanner() {
+        banner.innerHTML = "";
+      }
+
+      function showBanner(innerHtml, colorClass = "") {
+        banner.innerHTML =
+          '<div class="absolute top-2 left-4 right-4 z-10 flex justify-center">' +
+          `<div class="rounded-lg px-4 py-2 text-sm font-bold shadow-lg ${colorClass}">` +
+          innerHtml +
+          "</div></div>";
+      }
+
+      function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      async function hashTextSource(fileText) {
+        const digest = await crypto.subtle.digest(
+          "SHA-256",
+          new TextEncoder().encode(fileText),
+        );
+
+        return Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, "0"),
+        ).join("");
+      }
+
+      async function hashTextFile(filePath, fallbackText = "") {
+        try {
+          const response = await fetch(filePath, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`Unable to load ${filePath}`);
+          }
+
+          return await hashTextSource(await response.text());
+        } catch (_) {
+          if (!fallbackText) {
+            throw new Error(`Unable to load ${filePath}`);
+          }
+
+          return await hashTextSource(fallbackText);
+        }
+      }
+
+      function setButtonsDisabled(disabled) {
+        btnNormal.disabled = disabled;
+        btnAttack.disabled = disabled;
+      }
+
+      function formatTimestamp(unixTs) {
+        if (!unixTs || Number(unixTs) === 0) return "—";
+        return new Date(Number(unixTs) * 1000).toISOString().slice(0, 10);
+      }
+
+      function setSyncBadge(text, isError = false) {
+        syncBadge.textContent = text;
+        syncBadge.className = isError
+          ? "inline-flex items-center rounded-full border border-rose-500/20 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-300"
+          : "inline-flex items-center rounded-full border border-indigo-500/20 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-300";
+      }
+
+      function recreateContract(rpcUrl) {
+        provider = new ethers.JsonRpcProvider(rpcUrl);
+        contract = new ethers.Contract(CONTRACT_ADDRESS, READ_ABI, provider);
+      }
+
+      async function fetchFirmwareEntry(version) {
+        const hash = await contract.getFirmwareHash(version);
+        let releaseDate = "—";
+        try {
+          const entry = await contract.firmwares(version);
+          releaseDate = formatTimestamp(entry.timestamp);
+        } catch (_) {
+          /* timestamp optional */
+        }
+        return { version, hash, releaseDate };
+      }
+
+      async function loadRegistry() {
+        registryBody.innerHTML =
+          '<tr class="bg-slate-900"><td colspan="3" class="px-3 py-4 text-center text-slate-400">Querying Sepolia testnet...</td></tr>';
+        setSyncBadge("Sepolia Testnet: Connecting...");
+
+        const rows = [];
+        let successCount = 0;
+
+        for (const version of KNOWN_VERSIONS) {
+          try {
+            const entry = await fetchFirmwareEntry(version);
+            registryCache[version] = entry.hash;
+            rows.push(entry);
+            successCount++;
+          } catch (err) {
+            rows.push({
+              version,
+              hash: null,
+              releaseDate: "—",
+              error: err.message || "Not published",
+            });
+          }
+        }
+
+        if (successCount === 0) {
+          recreateContract(SEPOLIA_RPC_FALLBACK);
+          for (const version of KNOWN_VERSIONS) {
+            try {
+              const entry = await fetchFirmwareEntry(version);
+              registryCache[version] = entry.hash;
+              const idx = rows.findIndex((row) => row.version === version);
+              if (idx >= 0) rows[idx] = entry;
+              successCount++;
+            } catch (err) {
+              const idx = rows.findIndex((row) => row.version === version);
+              if (idx >= 0) {
+                rows[idx] = {
+                  version,
+                  hash: null,
+                  releaseDate: "—",
+                  error: err.message || "Not published",
+                };
+              }
+            }
+          }
+        }
+
+        registryBody.innerHTML = "";
+        if (successCount === 0) {
+          registryBody.innerHTML =
+            '<tr class="bg-slate-900"><td colspan="3" class="px-3 py-4 text-center text-rose-400">Failed to load registry from Sepolia. Check RPC or publish firmware first.</td></tr>';
+          setSyncBadge("Sepolia Testnet: Offline", true);
+          return;
+        }
+
+        rows.forEach((entry) => {
+          const tr = document.createElement("tr");
+          tr.className = "border-t border-slate-800/80 bg-slate-900 odd:bg-slate-900 even:bg-slate-950";
+          if (entry.hash) {
+            tr.innerHTML =
+              `<td class="px-3 py-2 font-mono text-indigo-200">${entry.version}</td>` +
+              `<td class="px-3 py-2">${entry.releaseDate}</td>` +
+              `<td class="px-3 py-2 text-[11px] break-all font-mono text-emerald-300">${entry.hash}</td>`;
+          } else {
+            tr.innerHTML =
+              `<td class="px-3 py-2 font-mono text-indigo-200">${entry.version}</td>` +
+              `<td class="px-3 py-2">${entry.releaseDate}</td>` +
+              '<td class="px-3 py-2 italic text-rose-400">Not on chain</td>';
+          }
+          registryBody.appendChild(tr);
+        });
+
+        setSyncBadge(`Sepolia Testnet: Live (${successCount}/${KNOWN_VERSIONS.length})`);
+      }
+
+      async function runVerification(localHash, expectMatch) {
+        clearTerminal();
+        clearBanner();
+        setButtonsDisabled(true);
+
+        try {
+          printLine(`[GATEWAY] Fetching firmware file: fota-${DEMO_VERSION}.bin`);
+          await delay(600);
+          printLine("[GATEWAY] Calculating local SHA-256 hash...");
+          await delay(600);
+          printLine(`[GATEWAY] Hash computed: ${localHash}`);
+          await delay(600);
+          printLine(`[GATEWAY] Querying Smart Contract Registry for version ${DEMO_VERSION}...`);
+
+          const blockchainHash = await contract.getFirmwareHash(DEMO_VERSION);
+          registryCache[DEMO_VERSION] = blockchainHash;
+
+          printLine(`[BLOCKCHAIN] Registry SHA-256: ${blockchainHash}`);
+
+          const matches = localHash === blockchainHash;
+
+          if (matches) {
+            printLine("[GATEWAY] Local hash MATCHES registry! Proceeding to device update.");
+            await delay(500);
+            printLine("[GATEWAY] Flashing update to devices... All devices are now secured.");
+            showBanner(
+              '<span class="flex items-center gap-2"><svg class="h-5 w-5 text-emerald-300" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg><span>SECURE PATH&nbsp;– Update completed and devices protected.</span></span>',
+              "border border-emerald-700 bg-emerald-900 text-emerald-300 mt-2",
+            );
+          } else {
+            printLine("[GATEWAY] Local hash DOES NOT MATCH registry! Blocking firmware update.");
+            await delay(500);
+            printLine("[GATEWAY] Update dropped. Devices shielded from potential MITM compromise.");
+            showBanner(
+              '<span class="flex items-center gap-2"><svg class="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728"></path></svg><span>WARNING: MITM Attempt Detected — Update Blocked to Protect Smart Devices!</span></span>',
+              "border border-rose-700 bg-rose-900 text-rose-400 mt-2 animate-pulse",
+            );
+          }
+        } catch (error) {
+          printLine(`[BLOCKCHAIN] Error: ${error.message}`);
+          if (expectMatch) {
+            showBanner(
+              "<span>Verification failed — could not reach Sepolia or version not published.</span>",
+              "border border-rose-700 bg-rose-900 text-rose-400 mt-2",
+            );
+          } else {
+            showBanner(
+              '<span class="flex items-center gap-2"><svg class="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-12.728 12.728M5.636 5.636l12.728 12.728"></path></svg><span>WARNING: MITM Attempt Detected — Update Blocked to Protect Smart Devices!</span></span>',
+              "border border-rose-700 bg-rose-900 text-rose-400 mt-2 animate-pulse",
+            );
+          }
+        } finally {
+          setButtonsDisabled(false);
+        }
+      }
+
+      async function simulateSecurePath() {
+        const localHash = registryCache[DEMO_VERSION];
+        if (!localHash) {
+          clearTerminal();
+          clearBanner();
+          printLine(`[SYSTEM] ${DEMO_VERSION} is not on chain yet. Publish it via the manufacturer dashboard first.`);
+          printLine("[SYSTEM] See DEMO.md for setup steps.");
+          return;
+        }
+        await runVerification(localHash, true);
+      }
+
+      async function simulateAttackPath() {
+        const tamperedHash = await hashTextFile(
+          TAMPERED_FIRMWARE_FILE,
+          TAMPERED_FIRMWARE_FALLBACK,
+        );
+        await runVerification(tamperedHash, false);
+      }
+
+      uploadForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        responseOutput.textContent =
+          "Hashing file and talking to Sepolia... Please wait (this takes a few seconds).";
+
+        const selectedFile = firmwareFileInput.files[0];
+        if (!selectedFile) {
+          responseOutput.textContent = "Error: Please select a firmware file.";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("version", versionInput.value.trim());
+        formData.append("firmwareFile", selectedFile);
+
+        try {
+          const res = await fetch("http://localhost:3000/upload-firmware", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await res.json();
+          responseOutput.textContent = JSON.stringify(data, null, 2);
+          await loadRegistry();
+        } catch (error) {
+          responseOutput.textContent = "Error: " + error.message;
+        }
+      });
+
+      btnNormal.onclick = simulateSecurePath;
+      btnAttack.onclick = simulateAttackPath;
+      document.addEventListener("DOMContentLoaded", loadRegistry);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,4 @@
+# just in case I upload the project
+.env*
+node_modules
+abi.json
