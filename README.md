@@ -1,1 +1,0 @@
-# smart-home-iot-update-fota-architecture
